@@ -2,15 +2,30 @@ import express from "express";
 import cors from "cors";
 import morgan from "morgan";
 import AppError from "./utils/apperror.js";
-import healthRouter from "./features/health/routes/healthrouter.js";
+import helmet from "helmet";
+import mongoSanitize from "express-mongo-sanitize";
+import compression from "compression";
+import rateLimit from "express-rate-limit";
+
+import healthRouter from "./features/health/routes/healthRouter.js";
+import authRouter from "./features/auth/routes/authRouter.js";
 
 const app = express();
-
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: "Too many requests, please try again later",
+});
+app.use(helmet());
 app.use(cors());
+app.use(mongoSanitize());
+app.use(compression());
+app.use("/api", limiter);
 app.use(express.json());
 app.use(morgan("dev"));
 
 app.use("/api/v1/health", healthRouter);
+app.use("/api/v1/auth", authRouter);
 
 app.use((request, response, next) => {
   next(
@@ -18,7 +33,7 @@ app.use((request, response, next) => {
   );
 });
 
-app.use((error, request, response, next) => {
+app.use((error, request, response, _next) => {
   const statusCode = error.statusCode || 500;
   const errorCode = error.code || "SERVER_001";
   const errorMessage = error.isOperational

@@ -1,8 +1,10 @@
 import dotenv from "dotenv";
 import app from "./app.js";
 import db from "./config/db.js";
+import { validateEnv } from "./config/envValidator.js";
 
 dotenv.config();
+validateEnv();
 
 const PORT = process.env.PORT || 7000;
 let server;
