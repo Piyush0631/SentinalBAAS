@@ -9,7 +9,7 @@ import rateLimit from "express-rate-limit";
 
 import healthRouter from "./features/health/routes/healthRouter.js";
 import authRouter from "./features/auth/routes/authRouter.js";
-
+import projectRouter from "./features/projects/routes/projectRoutes.js";
 const app = express();
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -26,7 +26,7 @@ app.use(morgan("dev"));
 
 app.use("/api/v1/health", healthRouter);
 app.use("/api/v1/auth", authRouter);
-
+app.use("/api/v1/projects", projectRouter);
 app.use((request, response, next) => {
   next(
     new AppError(`Route ${request.originalUrl} not found`, 404, "ROUTE_001"),
@@ -34,6 +34,9 @@ app.use((request, response, next) => {
 });
 
 app.use((error, request, response, _next) => {
+  // Log the full error stack for debugging
+  console.error(error);
+
   const statusCode = error.statusCode || 500;
   const errorCode = error.code || "SERVER_001";
   const errorMessage = error.isOperational
