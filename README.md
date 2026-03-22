@@ -1,6 +1,12 @@
 # SentinelBaaS
 
-A lightweight **Backend-as-a-Service platform** that lets developers instantly generate backend APIs, automatically analyzes them for security vulnerabilities, and produces live API documentation — all from a single platform.
+A next-generation **Backend-as-a-Service platform** that lets developers instantly generate backend APIs, dynamically create custom data models, automatically analyzes real API traffic for security vulnerabilities, and produces live API documentation — all from a single platform.
+
+---
+
+## What Makes This Project Unique?
+
+> "I built a multi-tenant BaaS platform where each project gets isolated API endpoints protected by a project-scoped API key. The security analyzer collects real request logs and runs both deterministic pattern checks and AI-enriched analysis on actual traffic — not static descriptions. The CRUD engine generates routes dynamically from a user-defined schema."
 
 ---
 
@@ -14,14 +20,15 @@ Existing BaaS platforms give you infrastructure. SentinelBaaS gives you **infras
 
 ## Core Features
 
-| Feature                | Description                                                                 |
-| ---------------------- | --------------------------------------------------------------------------- |
-| **Developer Auth**     | Register, login, JWT-protected dashboard routes                             |
-| **Project Management** | Create isolated backend projects, each with a unique API key                |
-| **CRUD API Engine**    | Auto-generated `records` REST API per project, protected by API key         |
-| **Security Analyzer**  | Deterministic rule checks + AI-powered explanations for API security issues |
-| **API Docs Generator** | Auto-generated JSON documentation per project endpoint                      |
-| **Frontend Dashboard** | UI for managing projects, viewing reports, copying API keys                 |
+| Feature                 | Description                                                                                       |
+| ----------------------- | ------------------------------------------------------------------------------------------------- |
+| **Developer Auth**      | Register, login, JWT-protected dashboard routes                                                   |
+| **Project Management**  | Create isolated backend projects, each with a unique API key                                      |
+| **Dynamic CRUD Engine** | User defines custom schema at project creation; dynamic Mongoose models and CRUD endpoints        |
+| **Request Logging**     | All project API requests are logged for security analysis and auditing                            |
+| **Security Analyzer**   | Deterministic rule checks + AI-powered explanations, using real request logs and traffic patterns |
+| **API Docs Generator**  | Auto-generated JSON documentation per project endpoint                                            |
+| **Frontend Dashboard**  | UI for managing projects, viewing reports, copying API keys                                       |
 
 ---
 
@@ -43,6 +50,8 @@ x-api-key: sk_proj_xxxxxxxxxxxx
 
 ## Generated CRUD Endpoints (per project)
 
+Endpoints are generated dynamically based on the schema you define at project creation. Example:
+
 ```
 POST   /api/v1/records
 GET    /api/v1/records
@@ -55,13 +64,15 @@ DELETE /api/v1/records/:id
 
 ## Security Analysis Output (per project)
 
+Security analysis is performed on real request logs, not just static route descriptions. Example output:
+
 ```json
 {
   "route": "/records",
-  "issue": "Missing authentication",
-  "severity": "High",
-  "explanation": "This route allows unauthenticated access",
-  "recommendation": "Add authentication middleware"
+  "issue": "Unexpected field in request body detected in 3/20 requests",
+  "severity": "Medium",
+  "explanation": "Some requests included fields not defined in the schema, which may indicate injection attempts.",
+  "recommendation": "Add stricter validation and reject unknown fields."
 }
 ```
 
@@ -134,14 +145,14 @@ Health check: `GET /api/v1/health` → `{ "success": true, "message": "Server ru
 
 ## Development Phases
 
-| Phase | Name                        | Status   |
-| ----- | --------------------------- | -------- |
-| -1    | Standards & Contracts       | Done     |
-| 0     | Initial Setup & Environment | Done     |
-| 1     | User Authentication         | Upcoming |
-| 2     | Project Management          | Upcoming |
-| 3     | API Key Middleware          | Upcoming |
-| 4     | CRUD API Engine             | Upcoming |
-| 5     | Security Analyzer           | Upcoming |
-| 6     | API Docs Generator          | Upcoming |
-| 7     | Frontend Dashboard          | Upcoming |
+| Phase | Name                                  | Status   |
+| ----- | ------------------------------------- | -------- |
+| -1    | Standards & Contracts                 | Done     |
+| 0     | Initial Setup & Environment           | Done     |
+| 1     | User Authentication                   | Done     |
+| 2     | Project Management                    | Done     |
+| 3     | API Key Middleware & Request Logging  | Upcoming |
+| 4     | Dynamic CRUD API Engine               | Upcoming |
+| 5     | Security Analyzer (Real Log Analysis) | Upcoming |
+| 6     | API Docs Generator                    | Upcoming |
+| 7     | Frontend Dashboard                    | Upcoming |
