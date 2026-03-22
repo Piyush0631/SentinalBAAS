@@ -1,34 +1,20 @@
 # SentinelBaaS
 
-A next-generation **Backend-as-a-Service platform** that lets developers instantly generate backend APIs, dynamically create custom data models, automatically analyzes real API traffic for security vulnerabilities, and produces live API documentation — all from a single platform.
-
----
-
-## What Makes This Project Unique?
-
-> "I built a multi-tenant BaaS platform where each project gets isolated API endpoints protected by a project-scoped API key. The security analyzer collects real request logs and runs both deterministic pattern checks and AI-enriched analysis on actual traffic — not static descriptions. The CRUD engine generates routes dynamically from a user-defined schema."
-
----
-
-## Problem It Solves
-
-Developers repeatedly rebuild the same backend setup (auth, CRUD, docs) across every project. And during fast dev cycles, common security mistakes slip in — missing auth checks, no input validation, injection-prone queries, excessive data exposure.
-
-Existing BaaS platforms give you infrastructure. SentinelBaaS gives you **infrastructure + automated security review** in one place.
+SentinelBaaS is a modern **Backend-as-a-Service platform** that lets you instantly generate backend APIs, define custom data models, analyze real API traffic for security vulnerabilities, and produce live API documentation — all from a single platform.
 
 ---
 
 ## Core Features
 
-| Feature                 | Description                                                                                       |
-| ----------------------- | ------------------------------------------------------------------------------------------------- |
-| **Developer Auth**      | Register, login, JWT-protected dashboard routes                                                   |
-| **Project Management**  | Create isolated backend projects, each with a unique API key                                      |
-| **Dynamic CRUD Engine** | User defines custom schema at project creation; dynamic Mongoose models and CRUD endpoints        |
-| **Request Logging**     | All project API requests are logged for security analysis and auditing                            |
-| **Security Analyzer**   | Deterministic rule checks + AI-powered explanations, using real request logs and traffic patterns |
-| **API Docs Generator**  | Auto-generated JSON documentation per project endpoint                                            |
-| **Frontend Dashboard**  | UI for managing projects, viewing reports, copying API keys                                       |
+| Feature                 | Description                                                                                |
+| ----------------------- | ------------------------------------------------------------------------------------------ |
+| **Developer Auth**      | Register, login, JWT-protected dashboard routes                                            |
+| **Project Management**  | Create isolated backend projects, each with a unique API key                               |
+| **Dynamic CRUD Engine** | Define your own schema at project creation; get dynamic Mongoose models and CRUD endpoints |
+| **Request Logging**     | All project API requests are logged for security analysis and auditing                     |
+| **Security Analyzer**   | Finds vulnerabilities using real request logs and AI-powered analysis                      |
+| **API Docs Generator**  | Auto-generated JSON documentation per project endpoint                                     |
+| **Frontend Dashboard**  | UI for managing projects, viewing reports, copying API keys                                |
 
 ---
 
