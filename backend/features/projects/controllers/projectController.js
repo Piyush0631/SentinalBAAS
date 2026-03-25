@@ -9,11 +9,13 @@ const createProject = catchAsync(async (req, res, next) => {
     return next(new AppError("Project name is required", 400, "PROJ_001"));
   }
   const apiKey = generateApiKey();
+  const recordSchema = req.body.recordSchema || null;
   const newProject = await Project.create({
     name,
     description,
     owner: req.user.id,
     apiKey,
+    recordSchema,
   });
   res.status(201).json({
     success: true,
@@ -59,8 +61,42 @@ const getProjectById = catchAsync(async (req, res, next) => {
   });
 });
 
+const updateProject = catchAsync(async (req, res, next) => {
+  const projectId = req.params.id;
+  const updates = {};
+  const allowedFields = ["name", "description", "recordSchema"];
+  allowedFields.forEach((field) => {
+    if (req.body[field] !== undefined) {
+      updates[field] = req.body[field];
+    }
+  });
+  const project = await Project.findById(projectId);
+  if (!project) {
+    return next(new AppError("Project not found", 404, "PROJ_002"));
+  }
+  if (project.owner.toString() !== req.user.id) {
+    return next(
+      new AppError("Not authorized to update this project", 403, "PROJ_004"),
+    );
+  }
+  Object.assign(project, updates);
+  await project.save();
+  res.status(200).json({
+    success: true,
+    message: "Project updated successfully",
+    data: {
+      project: {
+        id: project._id,
+        name: project.name,
+        description: project.description,
+        recordSchema: project.recordSchema,
+      },
+    },
+  });
+});
 export default {
   createProject,
   getProjects,
   getProjectById,
+  updateProject,
 };

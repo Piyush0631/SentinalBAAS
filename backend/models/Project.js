@@ -24,6 +24,10 @@ const projectSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  recordSchema: {
+    type: Object,
+    default: null,
+  },
 });
 
 export default mongoose.model("Project", projectSchema);
