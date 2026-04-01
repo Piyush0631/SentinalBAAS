@@ -1,3 +1,4 @@
+export { filterRecordsQuery } from "./filterRecordsQuery.js";
 import AppError from "../../../utils/apperror.js";
 const typeMap = {
   String: "string",
