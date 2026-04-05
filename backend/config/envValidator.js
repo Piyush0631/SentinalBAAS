@@ -1,4 +1,10 @@
-const arr = ["PORT", "DATABASE", "DATABASE_PASSWORD"];
+const arr = [
+  "PORT",
+  "DATABASE",
+  "DATABASE_PASSWORD",
+  "JWT_SECRET",
+  "JWT_EXPIRES_IN",
+];
 
 export const validateEnv = () => {
   const missingVars = arr.filter((varName) => !process.env[varName]);

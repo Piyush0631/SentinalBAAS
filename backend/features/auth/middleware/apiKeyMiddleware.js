@@ -8,13 +8,18 @@ const apiKeyMiddleware = catchAsync(async (req, res, next) => {
   if (!apiKey) {
     return next(new AppError("API key is missing", 401, "AUTH_006"));
   }
-  // Optional: Enforce sk_proj_ prefix
+
   if (!apiKey.startsWith("sk_proj_")) {
     return next(new AppError("Malformed API key", 400, "AUTH_009"));
   }
   const project = await Project.findOne({ apiKey });
   if (!project) {
     return next(new AppError("Invalid API key", 401, "AUTH_008"));
+  }
+
+  // Cross-check projectId in URL (if present) matches project from API key
+  if (req.params.projectId && req.params.projectId !== project._id.toString()) {
+    return next(new AppError("Project ID mismatch", 403, "AUTH_010"));
   }
   req.project = project;
 
@@ -28,6 +33,7 @@ const apiKeyMiddleware = catchAsync(async (req, res, next) => {
         headers: req.headers,
         body: req.body,
         responseStatus: res.statusCode,
+        ip: req.ip || req.headers["x-forwarded-for"],
       });
     } catch (err) {
       console.error("RequestLog error:", err);

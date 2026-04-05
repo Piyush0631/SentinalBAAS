@@ -1,3 +1,17 @@
+function validateRecordSchema(schema) {
+  if (!schema || typeof schema !== "object") return;
+  const allowedTypes = ["String", "Number", "Boolean"];
+  for (const key in schema) {
+    const field = schema[key];
+    if (!allowedTypes.includes(field.type)) {
+      throw new AppError(
+        `Invalid type for field ${key}: ${field.type}`,
+        400,
+        "INVALID_SCHEMA",
+      );
+    }
+  }
+}
 import catchAsync from "../../../utils/catchasync.js";
 import AppError from "../../../utils/apperror.js";
 import { generateApiKey } from "../../../utils/generateApiKey.js";
@@ -10,6 +24,7 @@ const createProject = catchAsync(async (req, res, next) => {
   }
   const apiKey = generateApiKey();
   const recordSchema = req.body.recordSchema || null;
+  if (recordSchema) validateRecordSchema(recordSchema);
   const newProject = await Project.create({
     name,
     description,

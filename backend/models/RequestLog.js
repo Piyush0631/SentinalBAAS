@@ -31,6 +31,10 @@ const requestLogSchema = new mongoose.Schema({
     type: Number,
     required: false,
   },
+  ip: {
+    type: String,
+    required: false,
+  },
   timestamp: {
     type: Date,
     default: Date.now,
