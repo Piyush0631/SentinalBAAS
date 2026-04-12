@@ -1,10 +1,12 @@
 /* global fetch */
 import RequestLog from "../../../models/RequestLog.js";
 import SecurityReport from "../../../models/SecurityReport.js";
+import { sanitizeLogs } from "./sanitizeLogs.js";
+import { callGroq } from "./providers/groq.js";
 
 function checkMissingApiKey(logs) {
-  const affected = logs.filter((log) => !log.headers?.["x-api-key"]);
-  if (affected.length == 0) return null;
+  const affected = logs.filter((log) => !log.hadApiKey);
+  if (affected.length === 0) return null;
   return {
     rule: "missing-api-key",
     issue: `${affected.length} requests were made without an API key`,
@@ -181,16 +183,15 @@ function checkDeleteSpike(logs) {
   };
 }
 
-function runDeterministicChecks(logs, recordSchema) {
-  const results = [
+async function runDeterministicChecks(logs, recordSchema) {
+  const results = await Promise.all([
     checkMissingApiKey(logs),
     checkHighErrorRate(logs),
     checkInjectionProbes(logs),
     checkSuspiciousTraffic(logs),
     checkUnknownFields(logs, recordSchema),
     checkDeleteSpike(logs),
-  ];
-
+  ]);
   return results.flat().filter(Boolean);
 }
 
@@ -214,7 +215,7 @@ export async function analyzeProject(project) {
     });
   }
 
-  const deterministicFindings = runDeterministicChecks(
+  const deterministicFindings = await runDeterministicChecks(
     logs,
     project.recordSchema,
   );
@@ -228,11 +229,22 @@ export async function analyzeProject(project) {
     analyzedAt: new Date().toISOString(),
   };
 
+  const sanitizedPayload = sanitizeLogs(logs, deterministicFindings);
+  let aiFindings = null;
+  let status = "deterministic-only";
+  try {
+    aiFindings = await callGroq(sanitizedPayload);
+    status = "full";
+  } catch (err) {
+    // If Groq fails, log error but continue with deterministic findings only
+    console.error("Groq AI enrichment failed:", err.message);
+  }
+
   const report = await SecurityReport.create({
     projectId: project._id,
     deterministicFindings,
-    aiFindings: null,
-    status: "deterministic-only",
+    aiFindings,
+    status,
     analyzerVersion: "v1.0",
     inputSummary,
   });

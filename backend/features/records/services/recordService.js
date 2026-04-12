@@ -1,3 +1,4 @@
+import { isSuspiciousInput } from "../../../utils/sanitization.js";
 export { filterRecordsQuery } from "./filterRecordsQuery.js";
 import AppError from "../../../utils/apperror.js";
 const typeMap = {
@@ -6,6 +7,16 @@ const typeMap = {
   Boolean: "boolean",
 };
 export function validateRecordData(schema, data, options = {}) {
+  for (const key of Object.keys(data)) {
+    const value = data[key];
+    if (isSuspiciousInput(String(value))) {
+      throw new AppError(
+        `Suspicious input detected in field '${key}'`,
+        400,
+        "RECORD_SUSPICIOUS_INPUT",
+      );
+    }
+  }
   const errors = [];
   const normalizedSchema =
     (schema || {}) instanceof Map

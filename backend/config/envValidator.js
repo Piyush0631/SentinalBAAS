@@ -4,6 +4,7 @@ const arr = [
   "DATABASE_PASSWORD",
   "JWT_SECRET",
   "JWT_EXPIRES_IN",
+  "GROQ_API_KEY",
 ];
 
 export const validateEnv = () => {
