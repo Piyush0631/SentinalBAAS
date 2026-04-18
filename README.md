@@ -48,17 +48,52 @@ DELETE /api/v1/records/:id
 
 ---
 
-## Security Analysis Output (per project)
+## Security Analyzer: How It Works
 
-Security analysis is performed on real request logs, not just static route descriptions. Example output:
+SentinelBaaS analyzes real API request logs for each project using a two-layer approach:
+
+1. **Deterministic Rule Engine:**
+   - Checks for missing API keys, malformed fields, high error rates, suspicious traffic, injection patterns, and more.
+   - Always runs, always returns actionable findings.
+
+2. **AI Enrichment (Groq, NVIDIA fallback):**
+   - Summarizes deterministic findings and log patterns.
+   - Calls Groq AI (primary) or NVIDIA Mistral (fallback) for risk analysis, severity, and recommendations.
+   - Strict 10s timeout, robust error handling, and per-project rate limiting.
+   - If all AI fails, deterministic findings are still returned.
+
+**Example Security Report Output:**
 
 ```json
 {
-  "route": "/records",
-  "issue": "Unexpected field in request body detected in 3/20 requests",
-  "severity": "Medium",
-  "explanation": "Some requests included fields not defined in the schema, which may indicate injection attempts.",
-  "recommendation": "Add stricter validation and reject unknown fields."
+  "deterministicFindings": [
+    {
+      "rule": "missing-api-key",
+      "issue": "16 requests were made without an API key",
+      "severity": "High",
+      "affectedCount": 16
+    },
+    {
+      "rule": "injection-probe",
+      "issue": "2 requests contained suspicious injection patterns",
+      "severity": "High",
+      "affectedCount": 2
+    }
+  ],
+  "aiFindings": {
+    "summary": "Missing API key in 16 requests, suspicious injection patterns in 2 requests.",
+    "recommendations": [
+      "Implement API key validation for all requests.",
+      "Monitor and block suspicious injection patterns."
+    ],
+    "severity": "High"
+  },
+  "status": "full",
+  "inputSummary": {
+    "totalRequests": 16,
+    "failedRequests": 3,
+    "uniqueRoutes": ["/records"]
+  }
 }
 ```
 
@@ -72,7 +107,7 @@ Severity levels: `Low` / `Medium` / `High`
 - **Framework**: Express.js
 - **Database**: MongoDB Atlas + Mongoose
 - **Auth**: JWT (dashboard) + API Key (generated APIs)
-- **AI**: OpenAI (security analysis enrichment)
+- **AI**: Groq (primary), NVIDIA Mistral (fallback) for security analysis enrichment
 - **Architecture**: Modular monolith, feature-first folders
 
 ---
@@ -103,12 +138,14 @@ cd backend
 npm install
 ```
 
-Create a `.env` file in `backend/`:
+Create a `.env` file in `backend/` (see `.env.example` for all variables):
 
 ```env
 PORT=7001
-DATABASE=your_mongodb_atlas_connection_string
-DATABASE_PASSWORD=your_password
+MONGO_URI=your_mongodb_connection_string
+GROQ_API_KEY=your_groq_api_key
+NVIDIA_API_KEY=your_nvidia_api_key
+JWT_SECRET=your_jwt_secret_key
 ```
 
 ```bash
@@ -123,22 +160,43 @@ Health check: `GET /api/v1/health` → `{ "success": true, "message": "Server ru
 
 ## Target Users
 
-- Backend developers who want rapid API generation
-- Students learning backend development
-- Startup teams prototyping MVPs quickly
+- Backend developers seeking rapid, secure API generation
+- Students learning modern backend and security practices
+- Startup teams prototyping MVPs with built-in security analysis
 
 ---
 
-## Development Phases
+## Development Phases & Status
 
-| Phase | Name                                  | Status   |
-| ----- | ------------------------------------- | -------- |
-| -1    | Standards & Contracts                 | Done     |
-| 0     | Initial Setup & Environment           | Done     |
-| 1     | User Authentication                   | Done     |
-| 2     | Project Management                    | Done     |
-| 3     | API Key Middleware & Request Logging  | Upcoming |
-| 4     | Dynamic CRUD API Engine               | Upcoming |
-| 5     | Security Analyzer (Real Log Analysis) | Upcoming |
-| 6     | API Docs Generator                    | Upcoming |
-| 7     | Frontend Dashboard                    | Upcoming |
+| Phase | Name                                 | Status   |
+| ----- | ------------------------------------ | -------- |
+| -1    | Standards & Contracts                | Done     |
+| 0     | Initial Setup & Environment          | Done     |
+| 1     | User Authentication                  | Done     |
+| 2     | Project Management                   | Done     |
+| 3     | API Key Middleware & Request Logging | Done     |
+| 4     | Dynamic CRUD API Engine              | Done     |
+| 5.1   | SecurityReport Model & Endpoint      | Done     |
+| 5.2   | Deterministic Rule Engine            | Done     |
+| 5.3   | Log Sanitization                     | Done     |
+| 5.4   | Groq AI Provider Integration         | Done     |
+| 5.5   | NVIDIA Fallback Provider (planned)   | Upcoming |
+| 5.6   | Fallback Chain & Full Integration    | Upcoming |
+| 6     | API Docs Generator                   | Upcoming |
+| 7     | Frontend Dashboard                   | Upcoming |
+
+---
+
+## Contributing
+
+1. Fork the repo and clone your fork.
+2. Create a new branch for your feature or bugfix.
+3. Run `npm install` in `/backend`.
+4. Add or update tests for your changes.
+5. Open a pull request with a clear description.
+
+---
+
+## License
+
+MIT License. See [LICENSE](LICENSE) for details.
