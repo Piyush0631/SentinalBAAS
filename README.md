@@ -185,18 +185,4 @@ Health check: `GET /api/v1/health` → `{ "success": true, "message": "Server ru
 | 6     | API Docs Generator                   | Upcoming |
 | 7     | Frontend Dashboard                   | Upcoming |
 
----
 
-## Contributing
-
-1. Fork the repo and clone your fork.
-2. Create a new branch for your feature or bugfix.
-3. Run `npm install` in `/backend`.
-4. Add or update tests for your changes.
-5. Open a pull request with a clear description.
-
----
-
-## License
-
-MIT License. See [LICENSE](LICENSE) for details.
