@@ -3,7 +3,20 @@ import RequestLog from "../../../models/RequestLog.js";
 import SecurityReport from "../../../models/SecurityReport.js";
 import { sanitizeLogs } from "./sanitizeLogs.js";
 import { callGroq } from "./providers/groq.js";
+import { callNvidia } from "./providers/nvidia.js";
 
+// Retry helper for AI providers
+async function withRetry(fn, args, retries = 1) {
+  let lastError;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fn(...args);
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError;
+}
 function checkMissingApiKey(logs) {
   const affected = logs.filter((log) => !log.hadApiKey);
   if (affected.length === 0) return null;
@@ -233,11 +246,17 @@ export async function analyzeProject(project) {
   let aiFindings = null;
   let status = "deterministic-only";
   try {
-    aiFindings = await callGroq(sanitizedPayload);
+    aiFindings = await withRetry(callGroq, [sanitizedPayload], 1); // 1 retry
     status = "full";
   } catch (err) {
-    // If Groq fails, log error but continue with deterministic findings only
     console.error("Groq AI enrichment failed:", err.message);
+    // Try NVIDIA fallback
+    try {
+      aiFindings = await withRetry(callNvidia, [sanitizedPayload], 1); // 1 retry
+      status = "partial";
+    } catch (nvidiaErr) {
+      console.error("NVIDIA AI enrichment failed:", nvidiaErr.message);
+    }
   }
 
   const report = await SecurityReport.create({

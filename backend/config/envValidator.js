@@ -5,6 +5,7 @@ const arr = [
   "JWT_SECRET",
   "JWT_EXPIRES_IN",
   "GROQ_API_KEY",
+  "NVIDIA_API_KEY",
 ];
 
 export const validateEnv = () => {

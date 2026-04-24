@@ -8,8 +8,8 @@ export const getSecurityReport = catchAsync(async (req, res) => {
   const existingReport = await SecurityReport.findOne({
     projectId: project._id,
   }).sort({ createdAt: -1 });
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-  if (existingReport && existingReport.createdAt > oneHourAgo) {
+  const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+  if (existingReport && existingReport.createdAt > thirtyMinutesAgo) {
     return res.status(200).json({
       success: true,
       data: { report: existingReport },

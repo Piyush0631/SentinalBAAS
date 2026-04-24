@@ -1,9 +1,9 @@
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 
 const aiRateLimit = rateLimit({
   windowMs: 60 * 1000,
   max: 5,
-  keyGenerator: (req) => req.project?._id?.toString() || req.ip,
+  keyGenerator: (req) => req.project?._id?.toString() || ipKeyGenerator(req), // ← use helper
   handler: (req, res) => {
     console.error(
       `AI rate limit hit — projectId: ${req.project?._id}, ip: ${req.ip}`,
