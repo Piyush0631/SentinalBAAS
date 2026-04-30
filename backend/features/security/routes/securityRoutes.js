@@ -7,7 +7,7 @@ import projectOwner from "../../projects/middleware/projectOwner.js";
 const router = express.Router();
 
 router.get(
-  "/:id/security-report",
+  "/:projectId/security-report",
   aiRateLimit,
   authMiddleware,
   projectOwner,

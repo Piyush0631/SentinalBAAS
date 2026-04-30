@@ -112,7 +112,9 @@ const getProjects = catchAsync(async (req, res) => {
 });
 
 const getProjectById = catchAsync(async (req, res, next) => {
-  const project = await Project.findById(req.params.id).select("-apiKey");
+  const project = await Project.findById(req.params.projectId).select(
+    "-apiKey",
+  );
   if (!project) {
     return next(new AppError("Project not found", 404, "PROJ_002"));
   }
@@ -128,7 +130,7 @@ const getProjectById = catchAsync(async (req, res, next) => {
 });
 
 const updateProject = catchAsync(async (req, res, next) => {
-  const projectId = req.params.id;
+  const projectId = req.params.projectId;
   const updates = {};
   const allowedFields = ["name", "description", "recordSchema"];
 

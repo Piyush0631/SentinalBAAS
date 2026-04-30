@@ -3,7 +3,7 @@ import AppError from "../../../utils/apperror.js";
 import catchAsync from "../../../utils/catchasync.js";
 
 const projectOwner = catchAsync(async (req, res, next) => {
-  const project = await Project.findById(req.params.id);
+  const project = await Project.findById(req.params.projectId);
   if (!project) {
     return next(new AppError("Project not found", 404, "PROJECT_404"));
   }
