@@ -3,44 +3,12 @@ import AppError from "../../../utils/apperror.js";
 import { generateApiKey } from "../../../utils/generateApiKey.js";
 import { isSuspiciousInput } from "../../../utils/sanitization.js";
 import Project from "../../../models/Project.js";
+import * as projectValidator from "../validators/projectValidator.js";
 
-// ── after imports ──────────────────────────────────────────────
-const ALLOWED_TYPES = ["String", "Number", "Boolean"];
-const RESERVED_FIELDS = [
-  "_id",
-  "id",
-  "project",
-  "createdAt",
-  "updatedAt",
-  "__v",
-];
-
-function validateRecordSchema(schema) {
-  if (!schema || typeof schema !== "object" || Array.isArray(schema)) {
-    return "recordSchema must be a plain object";
-  }
-  for (const key in schema) {
-    if (RESERVED_FIELDS.includes(key)) {
-      return `Field name '${key}' is reserved and cannot be used`;
-    }
-    const field = schema[key];
-    if (!field.type) {
-      return `Field '${key}' is missing a type`;
-    }
-    if (!ALLOWED_TYPES.includes(field.type)) {
-      return `Invalid type for field '${key}': ${field.type} — allowed: String, Number, Boolean`;
-    }
-  }
-  return null; // null = valid
-}
-
-// ── controllers ────────────────────────────────────────────────
 const createProject = catchAsync(async (req, res, next) => {
-  const { name, description } = req.body;
+  const validated = projectValidator.createProjectSchema.parse(req.body);
+   const { name, description, recordSchema } = validated;
 
-  if (!name) {
-    return next(new AppError("Project name is required", 400, "PROJ_001"));
-  }
 
   for (const [key, value] of Object.entries({ name, description })) {
     if (value && isSuspiciousInput(value)) {
@@ -49,8 +17,6 @@ const createProject = catchAsync(async (req, res, next) => {
       );
     }
   }
-
-  const recordSchema = req.body.recordSchema || null;
 
   if (recordSchema) {
     for (const [field, def] of Object.entries(recordSchema)) {
@@ -72,11 +38,6 @@ const createProject = catchAsync(async (req, res, next) => {
           ),
         );
       }
-    }
-
-    const schemaError = validateRecordSchema(recordSchema);
-    if (schemaError) {
-      return next(new AppError(schemaError, 400, "PROJ_003"));
     }
   }
 
@@ -130,29 +91,18 @@ const getProjectById = catchAsync(async (req, res, next) => {
 });
 
 const updateProject = catchAsync(async (req, res, next) => {
-  const projectId = req.params.projectId;
-  const updates = {};
-  const allowedFields = ["name", "description", "recordSchema"];
+  const validated = projectValidator.updateProjectSchema.parse(req.body);
+  const { name, description, recordSchema } = validated;
 
-  allowedFields.forEach((field) => {
-    if (req.body[field] !== undefined) {
-      updates[field] = req.body[field];
-    }
-  });
-
-  for (const [key, value] of Object.entries({
-    name: updates.name,
-    description: updates.description,
-  })) {
+  for (const [key, value] of Object.entries({ name, description })) {
     if (value && isSuspiciousInput(value)) {
       return next(
         new AppError(`Suspicious input detected in ${key}`, 400, "PROJ_900"),
       );
     }
   }
-
-  if (updates.recordSchema) {
-    for (const [field, def] of Object.entries(updates.recordSchema)) {
+  if (recordSchema) {
+    for (const [field, def] of Object.entries(recordSchema)) {
       if (isSuspiciousInput(field)) {
         return next(
           new AppError(
@@ -172,14 +122,9 @@ const updateProject = catchAsync(async (req, res, next) => {
         );
       }
     }
-
-    const schemaError = validateRecordSchema(updates.recordSchema);
-    if (schemaError) {
-      return next(new AppError(schemaError, 400, "PROJ_003"));
-    }
   }
 
-  const project = await Project.findById(projectId);
+  const project = await Project.findById(req.params.projectId);
   if (!project) {
     return next(new AppError("Project not found", 404, "PROJ_002"));
   }
@@ -188,8 +133,9 @@ const updateProject = catchAsync(async (req, res, next) => {
       new AppError("Not authorized to update this project", 403, "PROJ_004"),
     );
   }
-
-  Object.assign(project, updates);
+  if (name !== undefined) project.name = name;
+  if (description !== undefined) project.description = description;
+  if (recordSchema !== undefined) project.recordSchema = recordSchema;
   await project.save();
 
   res.status(200).json({

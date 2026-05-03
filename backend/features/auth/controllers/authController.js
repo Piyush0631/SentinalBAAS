@@ -4,22 +4,13 @@ import catchAsync from "../../../utils/catchasync.js";
 import AppError from "../../../utils/apperror.js";
 import {
   isSuspiciousInput,
-  isValidEmail,
-  isValidUsername,
+  // isValidEmail,
+  // isValidUsername,
 } from "../../../utils/sanitization.js";
-
+import * as authValidator from "../validators/authValidator.js";
 const registerUser = catchAsync(async (req, res, next) => {
-  const { username, email, password } = req.body;
-
-  if (!username || !email || !password) {
-    return next(
-      new AppError(
-        "Please provide username, email and password",
-        400,
-        "AUTH_001",
-      ),
-    );
-  }
+  const validated = authValidator.registerSchema.parse(req.body);
+  const { username, email, password } = validated;
 
   for (const [key, value] of Object.entries({ username, email, password })) {
     if (isSuspiciousInput(value)) {
@@ -27,26 +18,6 @@ const registerUser = catchAsync(async (req, res, next) => {
         new AppError(`Suspicious input detected in ${key}`, 400, "AUTH_900"),
       );
     }
-  }
-
-  if (!isValidEmail(email)) {
-    return next(new AppError("Please provide a valid email", 400, "AUTH_009"));
-  }
-
-  if (!isValidUsername(username)) {
-    return next(
-      new AppError(
-        "Username must be 3-30 characters, letters, numbers and underscores only",
-        400,
-        "AUTH_008",
-      ),
-    );
-  }
-
-  if (password.length < 8) {
-    return next(
-      new AppError("Password must be at least 8 characters", 400, "AUTH_010"),
-    );
   }
   const existingUser = await User.findOne({ email });
   if (existingUser) {
@@ -75,13 +46,8 @@ const registerUser = catchAsync(async (req, res, next) => {
 });
 
 const loginUser = catchAsync(async (req, res, next) => {
-  const { email, password } = req.body;
-
-  if (!email || !password) {
-    return next(
-      new AppError("Please provide email and password", 400, "AUTH_004"),
-    );
-  }
+  const validated = authValidator.loginSchema.parse(req.body);
+  const { email, password } = validated;
 
   for (const [key, value] of Object.entries({ email, password })) {
     if (isSuspiciousInput(value)) {
@@ -91,9 +57,6 @@ const loginUser = catchAsync(async (req, res, next) => {
     }
   }
 
-  if (!isValidEmail(email)) {
-    return next(new AppError("Please provide a valid email", 400, "AUTH_009"));
-  }
   const user = await User.findOne({ email }).select("+password");
   if (user) {
     const isMatch = await user.correctPassword(password, user.password);

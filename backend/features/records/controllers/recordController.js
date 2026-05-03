@@ -1,12 +1,12 @@
 import catchAsync from "../../../utils/catchasync.js";
 import AppError from "../../../utils/apperror.js";
 import Record from "../../../models/Record.js";
-import { validateRecordData } from "../services/recordService.js";
 import {
   filterRecordsQuery,
   buildQueryOptions,
   getRecordsService,
 } from "../services/filterRecordsQuery.js";
+import * as recordValidator from "../validators/recordValidator.js";
 export const createRecord = catchAsync(async (req, res, next) => {
   const project = req.project;
   if (!project) {
@@ -23,11 +23,13 @@ export const createRecord = catchAsync(async (req, res, next) => {
       ),
     );
   }
-  // Validate strictly for creation
-  validateRecordData(project.recordSchema, req.body, { partial: false });
+  const recordSchema = recordValidator.buildRecordCreateSchema(
+    project.recordSchema,
+  );
+  const validated = recordSchema.parse(req.body);
   const record = await Record.create({
     project: project._id,
-    data: req.body,
+    data: validated,
   });
   res.status(201).json({
     success: true,
@@ -122,9 +124,11 @@ export const updateRecord = catchAsync(async (req, res, next) => {
   if (!record) {
     return next(new AppError("Record not found", 404, "RECORD_003"));
   }
-  // Validate partially for update
-  validateRecordData(project.recordSchema, req.body, { partial: true });
-  record.data = { ...record.data, ...req.body };
+  const recordSchema = recordValidator.buildRecordUpdateSchema(
+    project.recordSchema,
+  );
+  const validated = recordSchema.parse(req.body);
+  record.data = { ...record.data, ...validated };
   await record.save();
   res.status(200).json({
     success: true,

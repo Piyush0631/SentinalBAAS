@@ -41,4 +41,6 @@ const requestLogSchema = new mongoose.Schema({
   },
 });
 
+requestLogSchema.index({ projectId: 1, timestamp: -1 });
+
 export default mongoose.model("RequestLog", requestLogSchema);

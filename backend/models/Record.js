@@ -14,5 +14,5 @@ const recordSchema = new mongoose.Schema(
   },
   { timestamps: true },
 );
-
+recordSchema.index({ project: 1 });
 export default mongoose.model("Record", recordSchema);
