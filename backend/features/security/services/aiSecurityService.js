@@ -1,10 +1,11 @@
 /* global fetch */
+/* global AbortController, setTimeout, clearTimeout */
 import RequestLog from "../../../models/RequestLog.js";
 import SecurityReport from "../../../models/SecurityReport.js";
 import { sanitizeLogs } from "./sanitizeLogs.js";
 import { callGroq } from "./providers/groq.js";
 import { callNvidia } from "./providers/nvidia.js";
-
+import redis from "../../../utils/redisClient.js";
 // Retry helper for AI providers
 async function withRetry(fn, args, retries = 1) {
   let lastError;
@@ -27,8 +28,36 @@ function checkMissingApiKey(logs) {
     affectedCount: affected.length,
   };
 }
+async function fetchGeoLocation(ip, timeoutMs = 4000) {
+  const cacheKey = `geo:${ip}`;
+  const cached = await redis.get(cacheKey);
+  if (cached) {
+    return JSON.parse(cached);
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(
+      `https://ip-api.com/json/${ip}?fields=country,regionName,city,status`,
+      { signal: controller.signal },
+    );
+    if (!response.ok) {
+      return null;
+    }
+    const geoData = await response.json();
+    await redis.set(cacheKey, JSON.stringify(geoData), "EX", 604800);
+    return geoData;
+  } catch (err) {
+    console.warn(`Geo lookup failed for ${ip}:`, err.message);
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 async function checkSuspiciousTraffic(logs) {
-  const threshold = 0.5;
+  const threshold = 0.7;
   if (!Array.isArray(logs) || logs.length === 0) return null;
 
   const ipCounts = {};
@@ -51,13 +80,7 @@ async function checkSuspiciousTraffic(logs) {
   if (uniqueIps.length > 0) {
     try {
       const geoResults = await Promise.all(
-        uniqueIps.map((ip) =>
-          fetch(
-            `http://ip-api.com/json/${ip}?fields=country,regionName,city,status`,
-          )
-            .then((r) => r.json())
-            .catch(() => null),
-        ),
+        uniqueIps.map((ip) => fetchGeoLocation(ip)),
       );
 
       const successfulResults = geoResults.filter(

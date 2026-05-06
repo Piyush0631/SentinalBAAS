@@ -1,9 +1,10 @@
 import dotenv from "dotenv";
+dotenv.config();
 import app from "./app.js";
 import db from "./config/db.js";
 import { validateEnv } from "./config/envValidator.js";
+import redis from "./utils/redisClient.js";
 
-dotenv.config();
 validateEnv();
 
 const PORT = process.env.PORT || 7000;
@@ -12,6 +13,18 @@ let server;
 const startServer = async () => {
   try {
     await db.connect();
+    redis
+      .ping()
+      .then((result) => {
+        if (result === "PONG") {
+          console.log("Redis connected");
+        } else {
+          console.warn("Redis ping failed:", result);
+        }
+      })
+      .catch((err) => {
+        console.error("Redis connection error:", err.message);
+      });
 
     server = app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
