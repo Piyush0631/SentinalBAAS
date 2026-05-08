@@ -34,6 +34,7 @@ const apiKeyMiddleware = catchAsync(async (req, res, next) => {
         body: req.body,
         responseStatus: res.statusCode,
         ip: req.ip || req.headers["x-forwarded-for"],
+        hadApiKey: true,
       });
     } catch (err) {
       console.error("RequestLog error:", err);

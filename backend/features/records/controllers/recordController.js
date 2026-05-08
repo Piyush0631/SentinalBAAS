@@ -7,22 +7,9 @@ import {
   getRecordsService,
 } from "../services/filterRecordsQuery.js";
 import * as recordValidator from "../validators/recordValidator.js";
-export const createRecord = catchAsync(async (req, res, next) => {
+
+export const createRecord = catchAsync(async (req, res) => {
   const project = req.project;
-  if (!project) {
-    return next(
-      new AppError("Project not found in request context", 400, "RECORD_001"),
-    );
-  }
-  if (req.params.projectId && project._id.toString() !== req.params.projectId) {
-    return next(
-      new AppError(
-        "Project ID and API key do not match",
-        403,
-        "PROJECT_MISMATCH",
-      ),
-    );
-  }
   const recordSchema = recordValidator.buildRecordCreateSchema(
     project.recordSchema,
   );
@@ -37,22 +24,8 @@ export const createRecord = catchAsync(async (req, res, next) => {
   });
 });
 
-export const getRecords = catchAsync(async (req, res, next) => {
+export const getRecords = catchAsync(async (req, res) => {
   const project = req.project;
-  if (!project) {
-    return next(
-      new AppError("Project not found in request context", 400, "RECORD_001"),
-    );
-  }
-  if (req.params.projectId && project._id.toString() !== req.params.projectId) {
-    return next(
-      new AppError(
-        "Project ID and API key do not match",
-        403,
-        "PROJECT_MISMATCH",
-      ),
-    );
-  }
   const allowedFields = Object.keys(project.recordSchema || {});
   const filter = filterRecordsQuery(
     req.query,
@@ -74,20 +47,6 @@ export const getRecords = catchAsync(async (req, res, next) => {
 
 export const getRecordById = catchAsync(async (req, res, next) => {
   const project = req.project;
-  if (!project) {
-    return next(
-      new AppError("Project not found in request context", 400, "RECORD_001"),
-    );
-  }
-  if (req.params.projectId && project._id.toString() !== req.params.projectId) {
-    return next(
-      new AppError(
-        "Project ID and API key do not match",
-        403,
-        "PROJECT_MISMATCH",
-      ),
-    );
-  }
   const record = await Record.findOne({
     _id: req.params.recordId,
     project: project._id,
@@ -103,20 +62,6 @@ export const getRecordById = catchAsync(async (req, res, next) => {
 
 export const updateRecord = catchAsync(async (req, res, next) => {
   const project = req.project;
-  if (!project) {
-    return next(
-      new AppError("Project not found in request context", 400, "RECORD_001"),
-    );
-  }
-  if (req.params.projectId && project._id.toString() !== req.params.projectId) {
-    return next(
-      new AppError(
-        "Project ID and API key do not match",
-        403,
-        "PROJECT_MISMATCH",
-      ),
-    );
-  }
   const record = await Record.findOne({
     _id: req.params.recordId,
     project: project._id,
@@ -138,20 +83,6 @@ export const updateRecord = catchAsync(async (req, res, next) => {
 
 export const deleteRecord = catchAsync(async (req, res, next) => {
   const project = req.project;
-  if (!project) {
-    return next(
-      new AppError("Project not found in request context", 400, "RECORD_001"),
-    );
-  }
-  if (req.params.projectId && project._id.toString() !== req.params.projectId) {
-    return next(
-      new AppError(
-        "Project ID and API key do not match",
-        403,
-        "PROJECT_MISMATCH",
-      ),
-    );
-  }
   const record = await Record.findOneAndDelete({
     _id: req.params.recordId,
     project: project._id,
@@ -159,8 +90,5 @@ export const deleteRecord = catchAsync(async (req, res, next) => {
   if (!record) {
     return next(new AppError("Record not found", 404, "RECORD_003"));
   }
-  res.status(204).json({
-    success: true,
-    data: null,
-  });
+  res.status(204).send();
 });

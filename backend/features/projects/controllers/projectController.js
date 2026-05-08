@@ -7,8 +7,7 @@ import * as projectValidator from "../validators/projectValidator.js";
 
 const createProject = catchAsync(async (req, res, next) => {
   const validated = projectValidator.createProjectSchema.parse(req.body);
-   const { name, description, recordSchema } = validated;
-
+  const { name, description, recordSchema } = validated;
 
   for (const [key, value] of Object.entries({ name, description })) {
     if (value && isSuspiciousInput(value)) {
@@ -72,18 +71,8 @@ const getProjects = catchAsync(async (req, res) => {
   });
 });
 
-const getProjectById = catchAsync(async (req, res, next) => {
-  const project = await Project.findById(req.params.projectId).select(
-    "-apiKey",
-  );
-  if (!project) {
-    return next(new AppError("Project not found", 404, "PROJ_002"));
-  }
-  if (project.owner.toString() !== req.user.id) {
-    return next(
-      new AppError("Not authorized to access this project", 403, "PROJ_004"),
-    );
-  }
+const getProjectById = catchAsync(async (req, res) => {
+  const project = req.project;
   res.status(200).json({
     success: true,
     data: { project },
@@ -124,15 +113,7 @@ const updateProject = catchAsync(async (req, res, next) => {
     }
   }
 
-  const project = await Project.findById(req.params.projectId);
-  if (!project) {
-    return next(new AppError("Project not found", 404, "PROJ_002"));
-  }
-  if (project.owner.toString() !== req.user.id) {
-    return next(
-      new AppError("Not authorized to update this project", 403, "PROJ_004"),
-    );
-  }
+  const project = req.project;
   if (name !== undefined) project.name = name;
   if (description !== undefined) project.description = description;
   if (recordSchema !== undefined) project.recordSchema = recordSchema;
