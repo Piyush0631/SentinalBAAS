@@ -3,12 +3,10 @@ import AppError from "../../../utils/apperror.js";
 import catchAsync from "../../../utils/catchasync.js";
 
 const authMiddleware = catchAsync(async (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+  const token = req.cookies?.token;
+  if (!token) {
     return next(new AppError("No token provided", 401, "AUTH_007"));
   }
-  const token = authHeader.split(" ")[1];
-
   const decoded = jwt.verify(token, process.env.JWT_SECRET);
   req.user = { id: decoded.id };
   next();

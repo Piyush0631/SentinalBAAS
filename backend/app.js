@@ -1,7 +1,9 @@
 import express from "express";
 import cors from "cors";
 import morgan from "morgan";
+import cookieParser from "cookie-parser";
 import AppError from "./utils/apperror.js";
+import { validationErrorHandler } from "./middleware/validationErrorHandler.js";
 import helmet from "helmet";
 import mongoSanitize from "express-mongo-sanitize";
 import compression from "compression";
@@ -27,7 +29,7 @@ app.use("/api", limiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
-
+app.use(cookieParser());
 app.use("/api/v1/health", healthRouter);
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/projects/:projectId/records", recordRouter);
@@ -40,6 +42,8 @@ app.use((request, response, next) => {
     new AppError(`Route ${request.originalUrl} not found`, 404, "ROUTE_001"),
   );
 });
+
+app.use(validationErrorHandler);
 
 app.use((error, request, response, _next) => {
   console.error(error);

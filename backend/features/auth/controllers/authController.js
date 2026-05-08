@@ -8,6 +8,8 @@ import {
   // isValidUsername,
 } from "../../../utils/sanitization.js";
 import * as authValidator from "../validators/authValidator.js";
+import { setTokenCookie } from "../../../utils/setTokenCookie.js";
+
 const registerUser = catchAsync(async (req, res, next) => {
   const validated = authValidator.registerSchema.parse(req.body);
   const { username, email, password } = validated;
@@ -31,10 +33,11 @@ const registerUser = catchAsync(async (req, res, next) => {
   const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN,
   });
+  setTokenCookie(res, token);
   res.status(201).json({
     success: true,
     message: "User registered successfully",
-    token,
+
     data: {
       user: {
         id: newUser._id,
@@ -69,11 +72,11 @@ const loginUser = catchAsync(async (req, res, next) => {
   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN,
   });
-
+  setTokenCookie(res, token);
   res.status(200).json({
     success: true,
     message: "Login successful",
-    token,
+
     data: {
       user: {
         id: user._id,
@@ -100,9 +103,13 @@ const getCurrentUser = catchAsync(async (req, res, next) => {
     },
   });
 });
-
+export const logoutUser = (req, res) => {
+  res.clearCookie("token");
+  res.status(200).json({ message: "Logged out" });
+};
 export default {
   registerUser,
   loginUser,
   getCurrentUser,
+  logoutUser,
 };
