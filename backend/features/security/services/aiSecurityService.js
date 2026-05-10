@@ -67,9 +67,17 @@ async function checkSuspiciousTraffic(logs) {
     ipCounts[ip] = (ipCounts[ip] || 0) + 1;
   });
 
-  const suspicious = Object.entries(ipCounts).filter(
-    ([, count]) => count > logs.length * threshold,
-  );
+  const suspicious = Object.entries(ipCounts).filter(([ip, count]) => {
+    if (count <= logs.length * threshold) return false;
+
+    const ipLogs = logs.filter((l) => l.ip === ip);
+    if (ipLogs.length < 5) return false;
+
+    const ipErrorRate =
+      ipLogs.filter((l) => l.responseStatus >= 400).length / ipLogs.length;
+
+    return ipErrorRate > 0.3;
+  });
 
   //Geo anomaly check
   const uniqueIps = [

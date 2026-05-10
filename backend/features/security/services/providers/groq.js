@@ -1,5 +1,7 @@
 import Groq from "groq-sdk";
 import AppError from "../../../../utils/apperror.js";
+import { buildPrompt } from "./buildPrompt.js";
+import { validateAiResponse } from "./validateAiResponse.js";
 
 const TIMEOUT_MS = 10000;
 let groqClient = null;
@@ -12,17 +14,8 @@ function getGroqClient() {
 }
 
 export async function callGroq(sanitizedPayload) {
-  const groq = getGroqClient(); // created once, reused forever
-  const prompt = `Analyze the following API security issues and return a JSON object with this exact contract:
-
-{
-  "summary": "string",
-  "recommendations": ["string"],
-  "severity": "Low" | "Medium" | "High"
-}
-
-Only return valid JSON, no markdown, no preamble.
-Input: ${JSON.stringify(sanitizedPayload)}`;
+  const groq = getGroqClient();
+  const prompt = buildPrompt(sanitizedPayload);
 
   const timeoutPromise = new Promise((_, reject) =>
     globalThis.setTimeout(
@@ -38,7 +31,7 @@ Input: ${JSON.stringify(sanitizedPayload)}`;
         model: "llama-3.1-8b-instant",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.2,
-        max_tokens: 512,
+        max_tokens: 1024,
         response_format: { type: "json_object" },
       }),
       timeoutPromise,
@@ -63,18 +56,5 @@ Input: ${JSON.stringify(sanitizedPayload)}`;
     throw new AppError("Groq response is not valid JSON", 502, "AI_ERROR");
   }
 
-  if (
-    typeof parsed.summary !== "string" ||
-    !Array.isArray(parsed.recommendations) ||
-    !parsed.recommendations.every((r) => typeof r === "string") ||
-    !["Low", "Medium", "High"].includes(parsed.severity)
-  ) {
-    throw new AppError(
-      "Groq response does not match contract",
-      502,
-      "AI_ERROR",
-    );
-  }
-
-  return parsed;
+  return validateAiResponse(parsed, "Groq");
 }
