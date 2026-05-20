@@ -38,15 +38,7 @@ npm run dev
 
 4. Register or log in, then create a project, then use the returned `apiKey` with generated project APIs.
 
----
-
-## Why It Stands Out
-
-This is not a toy CRUD demo. It combines authentication, project isolation, request logging, security analysis, and schema-driven API generation in one backend.
-
-- Developers create a project once and immediately get project-scoped APIs.
-- The platform logs real traffic so security analysis is based on actual requests.
-- API docs are generated from the schema so the docs match the implementation.
+Note: API keys are shown only once at creation — store them securely; only the hashed form is kept in the database.
 
 ---
 
@@ -157,6 +149,8 @@ SentinelBaaS analyzes real API request logs for each project using a two-layer a
    - Calls Groq AI (primary) or NVIDIA Mistral (fallback) for risk analysis, severity, and recommendations.
    - Strict 10s timeout, robust error handling, and per-project rate limiting.
    - If all AI fails, deterministic findings are still returned.
+
+API keys are never stored in plaintext; they are only shown once at creation and then stored as hashes.
 
 **Example Security Report Output:**
 

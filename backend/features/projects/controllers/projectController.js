@@ -1,3 +1,5 @@
+import crypto from "crypto";
+
 import catchAsync from "../../../utils/catchasync.js";
 import AppError from "../../../utils/apperror.js";
 import { generateApiKey } from "../../../utils/generateApiKey.js";
@@ -41,23 +43,25 @@ const createProject = catchAsync(async (req, res, next) => {
   }
 
   const apiKey = generateApiKey();
+  const hashedKey = crypto.createHash("sha256").update(apiKey).digest("hex");
   const newProject = await Project.create({
     name,
     description,
     owner: req.user.id,
-    apiKey,
+    apiKey: hashedKey,
     recordSchema,
   });
 
   res.status(201).json({
     success: true,
-    message: "Project created successfully",
+    message:
+      "Project created. Copy your API key now — it will never be shown again.",
     data: {
+      apiKey,
       project: {
         id: newProject._id,
         name: newProject.name,
         description: newProject.description,
-        apiKey: newProject.apiKey,
       },
     },
   });
@@ -75,7 +79,15 @@ const getProjectById = catchAsync(async (req, res) => {
   const project = req.project;
   res.status(200).json({
     success: true,
-    data: { project },
+    data: {
+      project: {
+        id: project._id,
+        name: project.name,
+        description: project.description,
+        recordSchema: project.recordSchema,
+        createdAt: project.createdAt,
+      },
+    },
   });
 });
 

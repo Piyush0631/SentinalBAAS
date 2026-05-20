@@ -1,7 +1,9 @@
+import crypto from "crypto";
 import Project from "../../../models/Project.js";
 import RequestLog from "../../../models/RequestLog.js";
 import AppError from "../../../utils/apperror.js";
 import catchAsync from "../../../utils/catchasync.js";
+import { sanitizeForLog } from "../../../utils/sanitization.js";
 
 const apiKeyMiddleware = catchAsync(async (req, res, next) => {
   const apiKey = req.headers["x-api-key"];
@@ -12,7 +14,9 @@ const apiKeyMiddleware = catchAsync(async (req, res, next) => {
   if (!apiKey.startsWith("sk_proj_")) {
     return next(new AppError("Malformed API key", 400, "AUTH_009"));
   }
-  const project = await Project.findOne({ apiKey });
+  const hashedKey = crypto.createHash("sha256").update(apiKey).digest("hex");
+
+  const project = await Project.findOne({ apiKey: hashedKey });
   if (!project) {
     return next(new AppError("Invalid API key", 401, "AUTH_008"));
   }
@@ -30,8 +34,8 @@ const apiKeyMiddleware = catchAsync(async (req, res, next) => {
         userId: req.user ? req.user.id : undefined,
         method: req.method,
         path: req.originalUrl,
-        headers: req.headers,
-        body: req.body,
+        headers: sanitizeForLog(req.headers),
+        body: sanitizeForLog(req.body),
         responseStatus: res.statusCode,
         ip: req.ip,
         hadApiKey: true,

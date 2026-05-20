@@ -22,10 +22,12 @@ const requestLogSchema = new mongoose.Schema({
   headers: {
     type: mongoose.Schema.Types.Mixed,
     required: false,
+    // Sensitive fields (API keys, tokens, passwords) must be sanitized before logging
   },
   body: {
     type: mongoose.Schema.Types.Mixed,
     required: false,
+    // Sensitive fields must be sanitized before logging
   },
   responseStatus: {
     type: Number,
@@ -35,6 +37,11 @@ const requestLogSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
+  hadApiKey: {
+    type: Boolean,
+    default: false,
+    required: false,
+  },
   timestamp: {
     type: Date,
     default: Date.now,
@@ -42,5 +49,9 @@ const requestLogSchema = new mongoose.Schema({
 });
 
 requestLogSchema.index({ projectId: 1, timestamp: -1 });
+requestLogSchema.index(
+  { timestamp: 1 },
+  { expireAfterSeconds: 60 * 60 * 24 * 30 },
+);
 
 export default mongoose.model("RequestLog", requestLogSchema);

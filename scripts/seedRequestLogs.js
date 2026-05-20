@@ -2,6 +2,7 @@
 // Usage: node scripts/seedRequestLogs.js <projectId> <count>
 
 import mongoose from "mongoose";
+import crypto from "crypto";
 import RequestLog from "../backend/models/RequestLog.js";
 
 const [, , projectId, countArg] = process.argv;
@@ -15,15 +16,23 @@ if (!projectId) {
 const MONGO_URI =
   process.env.MONGO_URI || "mongodb://localhost:27017/sentinelbaas";
 
+// Helper to hash API keys for logs (if using real keys)
+function hashApiKey(apiKey) {
+  return crypto.createHash("sha256").update(apiKey).digest("hex");
+}
+
 async function seedLogs() {
   await mongoose.connect(MONGO_URI);
   const logs = [];
   for (let i = 0; i < count; i++) {
+    // Use a dummy value or hash a real key if needed
+    const dummyApiKey = "dummy-key";
+    // const hashedApiKey = hashApiKey(realApiKey); // Uncomment if using real keys
     logs.push({
       projectId,
       method: "POST",
       path: "/api/v1/projects/" + projectId + "/records",
-      headers: { "x-api-key": "dummy-key" },
+      headers: { "x-api-key": dummyApiKey }, // or hashedApiKey
       body: { field: `value${i}` },
       responseStatus: 201,
       ip: `127.0.0.${i + 1}`,

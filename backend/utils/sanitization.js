@@ -1,3 +1,16 @@
+export function sanitizeForLog(obj) {
+  if (!obj || typeof obj !== "object") return obj;
+  const SENSITIVE_KEYS = ["x-api-key", "authorization", "password", "token"];
+  const clean = {};
+  for (const key in obj) {
+    if (SENSITIVE_KEYS.includes(key.toLowerCase())) {
+      clean[key] = "[REDACTED]";
+    } else {
+      clean[key] = obj[key];
+    }
+  }
+  return clean;
+}
 // Email validation using simple regex (for controller-level check)
 export function isValidEmail(email) {
   if (typeof email !== "string") return false;
