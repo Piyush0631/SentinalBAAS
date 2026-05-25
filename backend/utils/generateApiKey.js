@@ -1,10 +1,6 @@
 import crypto from "crypto";
 
 export function generateApiKey() {
-  const randomPart = crypto
-    .randomBytes(9)
-    .toString("base64")
-    .replace(/[^a-zA-Z0-9]/g, "")
-    .slice(0, 12);
+  const randomPart = crypto.randomBytes(6).toString("hex");
   return `sk_proj_${randomPart}`;
 }

@@ -1,3 +1,0 @@
-Planned edits:
-1) After Quickstart step 4, add: "Note: API keys are shown only once at creation — store them securely; only the hashed form is kept in the database."
-2) In Security Analyzer section (after first paragraph), add: "API keys are never stored in plaintext; they are only shown once at creation and then stored as hashes."
