@@ -1,202 +1,95 @@
 # SentinelBaaS
 
-SentinelBaaS is a modular **Backend-as-a-Service platform** for generating project-scoped APIs, defining custom data models, analyzing real API traffic for security risks, and producing live API documentation from a single backend.
+SentinelBaaS is an AI security analyzer wrapped around a modular backend platform. It turns a developer-authenticated dashboard into project-scoped APIs, then watches the resulting traffic for suspicious behavior, rule violations, and security risks. The differentiator is not just CRUD generation — it is the combination of generated APIs, request logging, and two-layer security analysis that produces actionable findings from real traffic.
 
-At a glance, it gives you:
+## Table of Contents
 
-- JWT-based auth for developers
-- Project-scoped API keys for generated APIs
-- Schema-driven CRUD routes
-- Real request-log security analysis
-- Auto-generated API docs per project
-
----
-
-## Quickstart
-
-1. Install dependencies:
-
-```bash
-cd backend
-npm install
-```
-
-2. Create `backend/.env` with the required variables used by the app:
-
-```env
-PORT=7001
-MONGO_URI=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret_key
-JWT_EXPIRES_IN=30d
-```
-
-3. Start the backend:
-
-```bash
-npm run dev
-```
-
-4. Register or log in, then create a project, then use the returned `apiKey` with generated project APIs.
-
-Note: API keys are shown only once at creation — store them securely; only the hashed form is kept in the database.
+- [How It Works](#how-it-works)
+- [Why It Is Built This Way](#why-it-is-built-this-way)
+- [Tech Stack](#tech-stack)
+- [Architecture](#architecture)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+- [API Overview](#api-overview)
+- [Known Limitations](#known-limitations)
+- [What I Would Do At Scale](#what-i-would-do-at-scale)
 
 ---
 
-## Core API Flow
+## How It Works
 
-```http
-POST /api/v1/auth/register
-POST /api/v1/auth/login
-POST /api/v1/projects
-POST /api/v1/projects/:projectId/records
-GET  /api/v1/projects/:projectId/docs
-```
-
-Use `Authorization: Bearer <your_jwt>` for project management and docs, and `x-api-key: sk_proj_xxxxxxxxxxxx` for generated project APIs.
+1. A developer registers and logs in via JWT-authenticated dashboard routes.
+2. They create a project and define a record schema (field names, types, required flags).
+3. SentinelBaaS generates a fully working CRUD API for that schema, scoped to the project API key.
+4. Every inbound request to the generated API is logged against the project.
+5. The developer triggers a security analysis — the system runs deterministic rule checks on the logs, then enriches findings with an AI model.
+6. Auto-generated API documentation is available per project at any time.
 
 ---
 
-## Auto-Generated API Example
+## Why It Is Built This Way
 
-If a project is created with this schema:
+**Two-layer security analysis** — a deterministic rule engine runs first so findings are never dependent on AI availability. Groq is used for enrichment and NVIDIA Mistral is the fallback when Groq is unavailable. If both fail, deterministic findings are still returned. The system never returns an empty result due to an AI outage.
 
-```json
-{
-  "name": { "type": "String", "required": true },
-  "age": { "type": "Number", "required": false },
-  "isActive": { "type": "Boolean", "required": false }
-}
-```
+**JWT for the dashboard, API keys for the data plane** — dashboard actions need user identity and session-style auth. Generated project APIs need a simple project-scoped credential that works from any backend client or service-to-service call without managing user sessions.
 
-SentinelBaaS automatically generates matching CRUD APIs for that schema. For example, creating a record uses this request:
+**HMAC-SHA256 for API key storage** — API keys are shown once at creation and never stored in plaintext. Only the keyed hash is persisted. Using HMAC with a server-side secret means the hashes cannot be brute-forced even if the database is fully compromised, unlike plain SHA-256 which offers no resistance to GPU-accelerated dictionary attacks.
 
-```http
-POST /api/v1/projects/:projectId/records
-```
+**Feature-first folder layout** — auth, projects, records, security, docs, and health are isolated modules. Each feature owns its routes, controllers, services, middleware, and validators. This keeps coupling low and makes each module independently testable.
 
-```json
-{
-  "name": "sample text",
-  "age": 0,
-  "isActive": false
-}
-```
-
-The response follows the same structured format across endpoints:
-
-```json
-{
-  "success": true,
-  "data": {
-    "_id": "6634a2f1c3b2a10012e4d9f7",
-    "createdAt": "2025-01-01T00:00:00Z",
-    "name": "sample text",
-    "age": 0,
-    "isActive": false
-  }
-}
-```
+**Request logging as a first-class concern** — logs are captured per project on every inbound request so the security analyzer inspects real traffic patterns rather than synthetic assumptions.
 
 ---
-
-## API Docs Generator: How It Works
-
-SentinelBaaS generates API documentation for each project from the project record schema using a two-mode approach:
-
-1. **Full Docs Generation:**
-   - Reads the project's `recordSchema` and builds documentation for all CRUD endpoints.
-   - Includes method, path, auth requirements, headers, request schema, response schema, examples, and status codes.
-   - Returns the complete endpoint list for the project.
-
-2. **Filtered Docs View:**
-   - Accepts an optional `operationId` query parameter.
-   - Returns only the matching endpoint doc when a specific operation is requested.
-   - Returns an empty `endpoints` array if no matching operation is found.
-
-**Example Docs Output:**
-
-```json
-{
-  "success": true,
-  "data": {
-    "projectId": "69d2687831cb9c053b979546",
-    "projectName": "My test Project",
-    "basePath": "/api/v1/projects/:projectId/records",
-    "endpoints": [
-      {
-        "operationId": "listRecords",
-        "method": "GET",
-        "path": "/api/v1/projects/:projectId/records"
-      }
-    ],
-    "generatedAt": "2026-04-30T15:24:30.670Z"
-  }
-}
-```
-
----
-
-## Security Analyzer: How It Works
-
-SentinelBaaS analyzes real API request logs for each project using a two-layer approach:
-
-1. **Deterministic Rule Engine:**
-   - Checks for missing API keys, malformed fields, high error rates, suspicious traffic, injection patterns, and more.
-   - Always runs, always returns actionable findings.
-
-2. **AI Enrichment (Groq, NVIDIA fallback):**
-   - Summarizes deterministic findings and log patterns.
-   - Calls Groq AI (primary) or NVIDIA Mistral (fallback) for risk analysis, severity, and recommendations.
-   - Strict 10s timeout, robust error handling, and per-project rate limiting.
-   - If all AI fails, deterministic findings are still returned.
-
-API keys are never stored in plaintext; they are only shown once at creation and then stored as hashes.
-
-**Example Security Report Output:**
-
-```json
-{
-  "deterministicFindings": [
-    {
-      "rule": "missing-api-key",
-      "issue": "16 requests were made without an API key",
-      "severity": "High",
-      "affectedCount": 16
-    },
-    {
-      "rule": "injection-probe",
-      "issue": "2 requests contained suspicious injection patterns",
-      "severity": "High",
-      "affectedCount": 2
-    }
-  ],
-  "aiFindings": {
-    "summary": "Missing API key in 16 requests, suspicious injection patterns in 2 requests.",
-    "recommendations": [
-      "Implement API key validation for all requests.",
-      "Monitor and block suspicious injection patterns."
-    ],
-    "severity": "High"
-  },
-  "status": "full",
-  "inputSummary": {
-    "totalRequests": 16,
-    "failedRequests": 3,
-    "uniqueRoutes": ["/records"]
-  }
-}
-```
-
-Severity levels: `Low` / `Medium` / `High`
 
 ## Tech Stack
 
-- **Runtime**: Node.js (ES Modules)
-- **Framework**: Express.js
-- **Database**: MongoDB Atlas + Mongoose
-- **Auth**: JWT (dashboard) + project API key (`x-api-key`) for generated APIs and docs
-- **AI**: Groq (primary), NVIDIA Mistral (fallback) for security analysis enrichment
-- **Architecture**: Modular monolith, feature-first folders
+| Layer         | Technology                                         |
+| ------------- | -------------------------------------------------- |
+| Runtime       | Node.js (ES Modules)                               |
+| Framework     | Express.js                                         |
+| Database      | MongoDB + Mongoose                                 |
+| Cache         | Redis (ioredis)                                    |
+| Auth          | JWT + HMAC-SHA256 API keys                         |
+| AI (primary)  | Groq                                               |
+| AI (fallback) | NVIDIA Mistral                                     |
+| Validation    | Zod                                                |
+| Security      | helmet, express-mongo-sanitize, express-rate-limit |
+| Logging       | Morgan (Apache Combined in production)             |
+
+---
+
+## Architecture
+
+```text
+Client / Dashboard / API Consumer
+              │
+              ▼
+        Express App
+        (helmet, cors, rate limit,
+         request ID tracing, morgan)
+              │
+              ├─────────────────────────► MongoDB
+              │                           users, projects,
+              │                           records, request logs,
+              │                           security reports
+              │
+              ├─────────────────────────► Redis
+              │                           geo-lookup cache
+              │
+              ▼
+       Security Analyzer
+       (deterministic rule engine)
+              │
+              ▼
+        Groq AI ──► NVIDIA Mistral (fallback)
+```
+
+**Auth split:**
+
+```text
+Dashboard routes  →  JWT middleware  →  project management, docs, security reports
+Data plane routes →  API key middleware  →  record CRUD, request logging
+```
 
 ---
 
@@ -204,47 +97,132 @@ Severity levels: `Low` / `Medium` / `High`
 
 ```
 backend/
-├── config/               # DB connection
+├── config/
+│   ├── db.js                  # MongoDB connection with graceful exit on failure
+│   └── envValidator.js        # Startup env validation
 ├── features/
-│   ├── auth/             # Register, login, JWT middleware
-│   ├── projects/         # Project management + API key generation
-│   ├── records/          # Auto-generated CRUD engine
-│   ├── security/         # Security analyzer
-│   ├── docs/             # API docs generator
-│   └── health/           # Health check
-├── utils/                # AppError, catchAsync
-├── app.js                # Express setup, middleware, routes
-└── server.js             # Entry point, DB connect, graceful shutdown
+│   ├── auth/                  # Register, login, JWT middleware, current user
+│   ├── projects/              # Project management, API key generation
+│   ├── records/               # Schema-driven CRUD engine
+│   ├── security/              # Two-layer security analyzer, geo enrichment
+│   ├── docs/                  # Auto-generated API docs per project
+│   └── health/                # Liveness and readiness checks
+├── middleware/
+│   └── validationErrorHandler.js  # Zod, Mongoose, JWT error mapping
+├── models/                    # Mongoose schemas with indexes
+├── utils/
+│   ├── apperror.js            # Operational error class
+│   ├── catchasync.js          # Async error wrapper
+│   ├── generateApiKey.js      # Prefixed API key generator
+│   ├── redisClient.js         # ioredis client with graceful degradation
+│   ├── sanitization.js        # Input sanitization helpers
+│   └── setTokenCookie.js      # HTTP-only cookie helper
+├── app.js                     # Express setup, middleware stack, routes
+└── server.js                  # Entry point, startup, graceful shutdown
 ```
-
-## Target Users
-
-- Backend developers seeking rapid, secure API generation
-- Students learning modern backend and security practices
-- Startup teams prototyping MVPs with built-in security analysis
 
 ---
 
-## Progress Snapshot
+## Getting Started
 
-### Completed
+### Prerequisites
 
-- Phase -1: Standards & Contracts
-- Phase 0: Initial Setup & Environment
-- Phase 1: User Authentication
-- Phase 2: Project Management
-- Phase 3: API Key Middleware & Request Logging
-- Phase 4: Dynamic CRUD API Engine
-- Phase 5: Security Analyzer
-- Phase 6: API Documentation Generator
+- Node.js 18+
+- MongoDB (local or Atlas)
+- Redis (local or managed)
+- Groq API key ([console.groq.com](https://console.groq.com))
+- NVIDIA API key ([build.nvidia.com](https://build.nvidia.com)) — optional, used as fallback
 
-### Upcoming
+### Installation
 
-- Phase 7: Frontend Dashboard
-- Phase 8: Testing & Cleanup
-- Phase 9: Deployment
+```bash
+cd backend
+npm install
+```
 
-### Future Enhancements
+### Environment Setup
 
-- Optional project webhooks for record and security events
-- Docs caching for high-traffic projects
+Copy the template below into `backend/.env` and fill in your values.
+
+```env
+PORT=7001
+
+DATABASE=mongodb+srv://<user>:<password>@<cluster>/sentinalbaas_dev?retryWrites=true&w=majority
+DATABASE_PASSWORD=<your_database_password>
+
+JWT_SECRET=<random_64_char_hex>
+JWT_EXPIRES_IN=7d
+
+API_KEY_SECRET=<random_64_char_hex>
+
+GROQ_API_KEY=<your_groq_api_key>
+NVIDIA_API_KEY=<your_nvidia_api_key>
+
+REDIS_URL=redis://<your_redis_connection_string>
+
+ALLOWED_ORIGINS=http://localhost:3000
+```
+
+Generate secure secret values with:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+### Running
+
+```bash
+# production
+npm start
+
+# development with auto-reload
+npm run dev
+```
+
+---
+
+## API Overview
+
+All routes are prefixed with `/api/v1`.
+
+| Group                               | Auth    | Description                                      |
+| ----------------------------------- | ------- | ------------------------------------------------ |
+| `POST /auth/register`               | none    | Register a new developer account                 |
+| `POST /auth/login`                  | none    | Login and receive JWT cookie                     |
+| `GET /auth/me`                      | JWT     | Get current authenticated user                   |
+| `POST /auth/logout`                 | JWT     | Clear session cookie                             |
+| `GET /projects`                     | JWT     | List all projects for current user               |
+| `POST /projects`                    | JWT     | Create a project and receive API key             |
+| `GET /projects/:id`                 | JWT     | Get project details and schema                   |
+| `PATCH /projects/:id`               | JWT     | Update project name, description, or schema      |
+| `GET /projects/:id/records`         | API key | List records for project                         |
+| `POST /projects/:id/records`        | API key | Create a record validated against project schema |
+| `GET /projects/:id/records/:rid`    | API key | Get a single record                              |
+| `PATCH /projects/:id/records/:rid`  | API key | Update a record                                  |
+| `DELETE /projects/:id/records/:rid` | API key | Delete a record                                  |
+| `GET /projects/:id/security-report` | JWT     | Run security analysis on project request logs    |
+| `GET /projects/:id/docs`            | JWT     | Get auto-generated API documentation             |
+| `GET /health`                       | none    | Liveness check                                   |
+
+**Dashboard routes** use `Authorization: Bearer <jwt>`.  
+**Data plane routes** use `x-api-key: sk_proj_<key>`.
+
+---
+
+## Known Limitations
+
+- Security analysis runs synchronously inside the HTTP request. At scale this would move to a background job queue (BullMQ) with a polling or webhook response pattern.
+- Geo-lookup uses the ip-api.com free tier, which is rate-limited at 45 requests per minute. A production deployment would use a paid provider or a locally hosted GeoIP database.
+- No frontend yet. The dashboard and deployment phases are upcoming.
+
+---
+
+## What I Would Do At Scale
+
+- Move security analysis into a background worker (BullMQ + Redis) so AI calls do not block request latency and provider outages do not affect API availability.
+- Add API key rotation and revocation per project so compromised keys can be invalidated without deleting the project.
+- Split the security analyzer into a dedicated microservice once traffic grows to the point where analysis load affects the main API.
+- Add structured logging with trace IDs propagated across services, metrics collection, and alerting dashboards.
+- Cache generated docs and security summaries per project with invalidation on schema or log changes.
+- Add provider-aware AI routing with quota tracking, retry budgets, and cost controls.
+- Enforce per-project rate limits, record storage caps, and log retention policies by subscription tier.

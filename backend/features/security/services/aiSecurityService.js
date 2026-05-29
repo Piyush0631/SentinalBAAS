@@ -5,7 +5,7 @@ import SecurityReport from "../../../models/SecurityReport.js";
 import { sanitizeLogs } from "./sanitizeLogs.js";
 import { callGroq } from "./providers/groq.js";
 import { callNvidia } from "./providers/nvidia.js";
-import redis from "../../../utils/redisClient.js";
+import redis, { isRedisHealthy } from "../../../utils/redisClient.js";
 // Retry helper for AI providers
 async function withRetry(fn, args, retries = 1) {
   let lastError;
@@ -30,9 +30,18 @@ function checkMissingApiKey(logs) {
 }
 async function fetchGeoLocation(ip, timeoutMs = 4000) {
   const cacheKey = `geo:${ip}`;
-  const cached = await redis.get(cacheKey);
-  if (cached) {
-    return JSON.parse(cached);
+  if (isRedisHealthy()) {
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch (err) {
+      console.warn("Redis geo cache read failed:", {
+        name: err?.name,
+        message: err?.message,
+      });
+    }
   }
 
   const controller = new AbortController();
@@ -46,7 +55,16 @@ async function fetchGeoLocation(ip, timeoutMs = 4000) {
       return null;
     }
     const geoData = await response.json();
-    await redis.set(cacheKey, JSON.stringify(geoData), "EX", 604800);
+    if (isRedisHealthy()) {
+      try {
+        await redis.set(cacheKey, JSON.stringify(geoData), "EX", 604800);
+      } catch (err) {
+        console.warn("Redis geo cache write failed:", {
+          name: err?.name,
+          message: err?.message,
+        });
+      }
+    }
     return geoData;
   } catch (err) {
     console.warn(`Geo lookup failed for ${ip}:`, err.message);

@@ -4,6 +4,7 @@ const arr = [
   "DATABASE_PASSWORD",
   "JWT_SECRET",
   "JWT_EXPIRES_IN",
+  "API_KEY_SECRET",
   "GROQ_API_KEY",
   "NVIDIA_API_KEY",
   "REDIS_URL",

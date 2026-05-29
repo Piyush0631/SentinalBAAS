@@ -7,43 +7,57 @@ import { isSuspiciousInput } from "../../../utils/sanitization.js";
 import Project from "../../../models/Project.js";
 import * as projectValidator from "../validators/projectValidator.js";
 
+const validateSuspiciousFields = (fields, next) => {
+  for (const [key, value] of Object.entries(fields)) {
+    if (value && isSuspiciousInput(value)) {
+      next(
+        new AppError(`Suspicious input detected in ${key}`, 400, "PROJ_900"),
+      );
+      return true;
+    }
+  }
+  return false;
+};
+
+const validateSuspiciousSchema = (recordSchema, next) => {
+  if (!recordSchema) return false;
+  for (const [field, def] of Object.entries(recordSchema)) {
+    if (isSuspiciousInput(field)) {
+      next(
+        new AppError(
+          `Suspicious input detected in recordSchema field name: ${field}`,
+          400,
+          "PROJ_901",
+        ),
+      );
+      return true;
+    }
+    if (def && def.type && isSuspiciousInput(def.type)) {
+      next(
+        new AppError(
+          `Suspicious input detected in recordSchema type for field: ${field}`,
+          400,
+          "PROJ_902",
+        ),
+      );
+      return true;
+    }
+  }
+  return false;
+};
+
 const createProject = catchAsync(async (req, res, next) => {
   const validated = projectValidator.createProjectSchema.parse(req.body);
   const { name, description, recordSchema } = validated;
 
-  for (const [key, value] of Object.entries({ name, description })) {
-    if (value && isSuspiciousInput(value)) {
-      return next(
-        new AppError(`Suspicious input detected in ${key}`, 400, "PROJ_900"),
-      );
-    }
-  }
-
-  if (recordSchema) {
-    for (const [field, def] of Object.entries(recordSchema)) {
-      if (isSuspiciousInput(field)) {
-        return next(
-          new AppError(
-            `Suspicious input detected in recordSchema field name: ${field}`,
-            400,
-            "PROJ_901",
-          ),
-        );
-      }
-      if (def && def.type && isSuspiciousInput(def.type)) {
-        return next(
-          new AppError(
-            `Suspicious input detected in recordSchema type for field: ${field}`,
-            400,
-            "PROJ_902",
-          ),
-        );
-      }
-    }
-  }
+  if (validateSuspiciousFields({ name, description }, next)) return;
+  if (validateSuspiciousSchema(recordSchema, next)) return;
 
   const apiKey = generateApiKey();
-  const hashedKey = crypto.createHash("sha256").update(apiKey).digest("hex");
+  const hashedKey = crypto
+    .createHmac("sha256", process.env.API_KEY_SECRET)
+    .update(apiKey)
+    .digest("hex");
   const newProject = await Project.create({
     name,
     description,
@@ -95,35 +109,8 @@ const updateProject = catchAsync(async (req, res, next) => {
   const validated = projectValidator.updateProjectSchema.parse(req.body);
   const { name, description, recordSchema } = validated;
 
-  for (const [key, value] of Object.entries({ name, description })) {
-    if (value && isSuspiciousInput(value)) {
-      return next(
-        new AppError(`Suspicious input detected in ${key}`, 400, "PROJ_900"),
-      );
-    }
-  }
-  if (recordSchema) {
-    for (const [field, def] of Object.entries(recordSchema)) {
-      if (isSuspiciousInput(field)) {
-        return next(
-          new AppError(
-            `Suspicious input detected in recordSchema field name: ${field}`,
-            400,
-            "PROJ_901",
-          ),
-        );
-      }
-      if (def && def.type && isSuspiciousInput(def.type)) {
-        return next(
-          new AppError(
-            `Suspicious input detected in recordSchema type for field: ${field}`,
-            400,
-            "PROJ_902",
-          ),
-        );
-      }
-    }
-  }
+  if (validateSuspiciousFields({ name, description }, next)) return;
+  if (validateSuspiciousSchema(recordSchema, next)) return;
 
   const project = req.project;
   if (name !== undefined) project.name = name;

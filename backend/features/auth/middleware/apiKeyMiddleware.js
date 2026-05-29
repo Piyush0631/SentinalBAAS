@@ -14,7 +14,10 @@ const apiKeyMiddleware = catchAsync(async (req, res, next) => {
   if (!apiKey.startsWith("sk_proj_")) {
     return next(new AppError("Malformed API key", 400, "AUTH_009"));
   }
-  const hashedKey = crypto.createHash("sha256").update(apiKey).digest("hex");
+  const hashedKey = crypto
+    .createHmac("sha256", process.env.API_KEY_SECRET)
+    .update(apiKey)
+    .digest("hex");
 
   const project = await Project.findOne({ apiKey: hashedKey });
   if (!project) {

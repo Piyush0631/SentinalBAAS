@@ -2,11 +2,7 @@ import jwt from "jsonwebtoken";
 import User from "../../../models/User.js";
 import catchAsync from "../../../utils/catchasync.js";
 import AppError from "../../../utils/apperror.js";
-import {
-  isSuspiciousInput,
-  // isValidEmail,
-  // isValidUsername,
-} from "../../../utils/sanitization.js";
+import { isSuspiciousInput } from "../../../utils/sanitization.js";
 import * as authValidator from "../validators/authValidator.js";
 import { setTokenCookie } from "../../../utils/setTokenCookie.js";
 
@@ -103,7 +99,7 @@ const getCurrentUser = catchAsync(async (req, res, next) => {
     },
   });
 });
-export const logoutUser = (req, res) => {
+const logoutUser = (req, res) => {
   res.clearCookie("token");
   res.status(200).json({ message: "Logged out" });
 };

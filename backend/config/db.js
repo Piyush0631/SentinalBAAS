@@ -19,8 +19,13 @@ const db = {
       );
     }
 
-    await mongoose.connect(databaseUri);
-    console.log("MongoDB connected");
+    try {
+      await mongoose.connect(databaseUri);
+      console.log("MongoDB connected");
+    } catch (error) {
+      console.error("MongoDB connection failed:", error.message);
+      throw error;
+    }
   },
 };
 

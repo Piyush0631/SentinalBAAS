@@ -8,7 +8,7 @@ import helmet from "helmet";
 import mongoSanitize from "express-mongo-sanitize";
 import compression from "compression";
 import rateLimit from "express-rate-limit";
-
+import crypto from "crypto";
 import healthRouter from "./features/health/routes/healthRouter.js";
 import authRouter from "./features/auth/routes/authRouter.js";
 import projectRouter from "./features/projects/routes/projectRoutes.js";
@@ -22,13 +22,36 @@ const limiter = rateLimit({
   message: "Too many requests, please try again later",
 });
 app.use(helmet());
-app.use(cors());
+app.use(
+  cors({
+    origin: process.env.ALLOWED_ORIGINS?.split(","),
+    credentials: true,
+  }),
+);
 app.use(mongoSanitize());
 app.use(compression());
 app.use("/api", limiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(morgan("dev"));
+
+morgan.token("requestId", (req) => req.id || "-");
+app.use((req, res, next) => {
+  const incoming = req.headers["x-request-id"];
+  const id =
+    typeof incoming === "string" && incoming ? incoming : crypto.randomUUID();
+  req.id = id;
+  res.setHeader("x-request-id", id);
+  next();
+});
+if (process.env.NODE_ENV === "production") {
+  app.use(
+    morgan(
+      'requestId=:requestId :remote-addr - :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent"',
+    ),
+  );
+} else {
+  app.use(morgan("dev"));
+}
 app.use(cookieParser());
 app.use("/api/v1/health", healthRouter);
 app.use("/api/v1/auth", authRouter);

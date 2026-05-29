@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 dotenv.config();
+
 import app from "./app.js";
 import db from "./config/db.js";
 import { validateEnv } from "./config/envValidator.js";
@@ -10,7 +11,7 @@ validateEnv();
 const PORT = process.env.PORT || 7000;
 let server;
 
-const startServer = async () => {
+const start = async () => {
   try {
     await db.connect();
     redis
@@ -35,10 +36,23 @@ const startServer = async () => {
   }
 };
 
-startServer();
-
 process.on("unhandledRejection", (error) => {
   console.error("UNHANDLED REJECTION! Shutting down...");
+  console.error(error.name, error.message);
+
+  if (server) {
+    server.close(() => {
+      process.exit(1);
+    });
+
+    return;
+  }
+
+  process.exit(1);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("UNCAUGHT EXCEPTION! Shutting down...");
   console.error(error.name, error.message);
 
   if (server) {
@@ -64,4 +78,9 @@ process.on("SIGTERM", () => {
   }
 
   process.exit(0);
+});
+
+start().catch((error) => {
+  console.error("Startup failed:", error.message);
+  process.exit(1);
 });
