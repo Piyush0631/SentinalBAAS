@@ -8,8 +8,8 @@ const db = {
     let databaseUri = process.env.MONGO_URI;
 
     if (databaseTemplate) {
-      databaseUri = databaseTemplate.includes("<PASSWORD>")
-        ? databaseTemplate.replace("<PASSWORD>", databasePassword || "")
+      databaseUri = databaseTemplate.includes("<db_password>")
+        ? databaseTemplate.replace("<db_password>", databasePassword || "")
         : databaseTemplate;
     }
 

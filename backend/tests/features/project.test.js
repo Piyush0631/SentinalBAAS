@@ -30,7 +30,7 @@ describe("Project Endpoints", () => {
         });
 
       expect(res.statusCode).toBe(201);
-      expect(res.body.data.apiKey).toMatch(/^sk_proj_[a-f0-9]{12}$/);
+      expect(res.body.data.apiKey).toMatch(/^sk_proj_[a-f0-9]{32}$/);
       expect(res.body.data.project.name).toBe("Project Alpha");
       expect(res.body.data.project.description).toBe("First project");
     });
