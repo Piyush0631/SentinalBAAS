@@ -30,6 +30,7 @@ app.use(
 );
 app.use(mongoSanitize());
 app.use(compression());
+app.use("/api/v1/health", healthRouter);
 app.use("/api", limiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -53,7 +54,7 @@ if (process.env.NODE_ENV === "production") {
   app.use(morgan("dev"));
 }
 app.use(cookieParser());
-app.use("/api/v1/health", healthRouter);
+
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/projects/:projectId/records", recordRouter);
 app.use("/api/v1/projects", securityRouter);
