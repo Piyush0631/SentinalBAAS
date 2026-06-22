@@ -1,4 +1,7 @@
+import swaggerSpec from "./config/swagger.js";
+
 import express from "express";
+import swaggerUi from "swagger-ui-express";
 import cors from "cors";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
@@ -54,6 +57,8 @@ if (process.env.NODE_ENV === "production") {
   app.use(morgan("dev"));
 }
 app.use(cookieParser());
+
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/projects/:projectId/records", recordRouter);
